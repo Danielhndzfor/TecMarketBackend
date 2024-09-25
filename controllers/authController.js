@@ -46,12 +46,13 @@ const authUser = async (req, res) => {
         if (!user) {
             return res.status(400).json({ msg: 'Usuario no encontrado' });
         }
-
+        
         const isMatch = await user.matchPassword(password);
-
+        
         if (!isMatch) {
             return res.status(400).json({ msg: 'Contraseña incorrecta' });
         }
+        
 
         const token = generateToken(user);
 

@@ -5,6 +5,7 @@ const path = require('path');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorMiddleware');
 
+
 // Importa la configuración de Multer
 const upload = require('./middleware/multerConfig');
 
@@ -17,6 +18,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const productRoutes = require('./routes/productRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const userRoutes = require('./routes/userRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // Cargar las variables de entorno
 dotenv.config();
@@ -45,6 +47,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/products', upload.array('images', 5), productRoutes);  // Uso de Multer para imágenes
 app.use('/api/categories', categoryRoutes);
 app.use('/api/auth', userRoutes);
+// Usar las rutas de pago
+app.use('/api/payments', paymentRoutes); 
+
 
 // Ruta para servir las imágenes
 app.use('/images', express.static(path.join(__dirname, 'uploads')));

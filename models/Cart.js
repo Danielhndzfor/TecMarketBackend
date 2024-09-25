@@ -14,9 +14,15 @@ const cartSchema = new mongoose.Schema({
 });
 
 // Método para calcular el total del carrito
-cartSchema.methods.calculateTotal = function() {
-    return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+cartSchema.methods.calculateTotal = async function() {
+    let total = 0;
+    for (let item of this.items) {
+        const product = await mongoose.model('Product').findById(item.product); // Obtener el producto
+        total += product.price * item.quantity; // Sumar el precio del producto por la cantidad
+    }
+    return total;
 };
+
 
 const Cart = mongoose.model('Cart', cartSchema);
 
