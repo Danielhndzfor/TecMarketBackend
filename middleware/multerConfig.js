@@ -1,6 +1,7 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const crypto = require('crypto');
+const path = require('path'); // Asegúrate de importar 'path'
 const cloudinary = require('../config/cloudinary'); // Ajusta la ruta según sea necesario
 
 // Configuración de almacenamiento en Cloudinary
@@ -11,7 +12,7 @@ const storage = new CloudinaryStorage({
         allowed_formats: ['jpg', 'png', 'jpeg'],
         filename: (req, file) => {
             const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(6).toString('hex');
-            const ext = path.extname(file.originalname);
+            const ext = path.extname(file.originalname); // Aquí usamos path
             const basename = path.basename(file.originalname, ext);
             return `${uniqueSuffix}-${basename}${ext}`; // Nombre del archivo único
         },
@@ -35,6 +36,7 @@ const upload = multer({
 });
 
 module.exports = upload;
+
 
 
 
