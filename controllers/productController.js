@@ -41,7 +41,7 @@ exports.getProducts = async (req, res) => {
 // Crear un nuevo producto
 exports.createProduct = async (req, res) => {
     const { name, description, price, stock, category, seller, rating } = req.body;
-    const images = req.files ? req.files.map(file => file.path.replace(/\\/g, '/')) : [];
+    const images = req.files ? req.files.map(file => file.path) : []; // Obtiene la URL de Cloudinary
 
     try {
         const product = new Product({
@@ -52,7 +52,7 @@ exports.createProduct = async (req, res) => {
             category,
             seller,
             rating,
-            images
+            images,
         });
 
         const savedProduct = await product.save();
@@ -61,6 +61,7 @@ exports.createProduct = async (req, res) => {
         res.status(500).json({ message: 'Error al crear el producto', error });
     }
 };
+
 
 
 
