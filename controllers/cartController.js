@@ -13,7 +13,6 @@ exports.addToCart = async (req, res) => {
 };
 
 // Controlador para obtener el carrito
-// Controlador para obtener el carrito
 exports.getCart = async (req, res) => {
     const { userId } = req.params;
 
@@ -31,6 +30,24 @@ exports.getCart = async (req, res) => {
     }
 };
 
+// Controlador para vaciar el carrito
+exports.clearCart = async (req, res) => {
+    const { userId } = req.params; // Obtenemos el userId desde los parámetros de la URL
+
+    try {
+        // Actualizamos el carrito del usuario, estableciendo los items como un arreglo vacío
+        const cart = await Cart.findOneAndUpdate({ buyer: userId }, { items: [] }, { new: true });
+
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found.' });
+        }
+
+        res.status(200).json({ message: 'Cart cleared successfully', cart });
+    } catch (error) {
+        console.error('Error clearing cart:', error.message);
+        res.status(500).json({ message: 'Failed to clear cart.' });
+    }
+};
 
 
 // Eliminar un producto del carrito

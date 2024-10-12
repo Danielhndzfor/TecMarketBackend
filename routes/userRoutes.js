@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const User = require('../models/User');
-const { updateUserRole } = require('../controllers/userController');
+const { updateUserRole, updateUserToSeller, updateSellerToUser, updateUser } = require('../controllers/userController');
 
 // Ruta para obtener el usuario actual
 router.get('/me', protect, async (req, res) => {
@@ -17,11 +17,17 @@ router.get('/me', protect, async (req, res) => {
     }
 });
 
+// Ruta para actualizar un usuario
+router.put('/update-user/:id', protect, updateUser); // Agregar middleware si es necesario
 
 // Ruta para actualizar el rol del usuario
 router.put('/update-role/:userId', protect, updateUserRole);
 
+// Ruta para cambiar el rol a vendedor y agregar la CLABE interbancaria
+router.post('/soy-vendedor', protect, updateUserToSeller )
 
+// Ruta para cambiar el rol a comprador
+router.post('/soy-comprador/:id', protect, updateSellerToUser);
 
 
 module.exports = router;

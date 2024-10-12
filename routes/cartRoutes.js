@@ -12,6 +12,9 @@ router.get('/:userId', cartController.getCart);
 // Ruta para eliminar del carrito
 router.post('/remove', cartController.removeFromCart);
 
+// Vaciar el carrito
+router.delete('/clear/:userId', cartController.clearCart);  // Nueva ruta para vaciar el carrito
+
 module.exports = router;
 
 

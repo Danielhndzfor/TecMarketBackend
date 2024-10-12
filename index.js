@@ -12,13 +12,12 @@ const upload = require('./middleware/multerConfig');
 // Rutas
 const authRoutes = require('./routes/authRoutes');
 const cartRoutes = require('./routes/cartRoutes');
-const saleRoutes = require('./routes/saleRoutes');
-const historyRoutes = require('./routes/historyRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const productRoutes = require('./routes/productRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const userRoutes = require('./routes/userRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 // Cargar las variables de entorno
 dotenv.config();
@@ -41,14 +40,13 @@ app.use(express.json());
 // Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/cart', cartRoutes);
-app.use('/api/sale', saleRoutes);
-app.use('/api/history', historyRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/products', upload.array('images', 5), productRoutes);  // Uso de Multer para imágenes
 app.use('/api/categories', categoryRoutes);
 app.use('/api/auth', userRoutes);
 // Usar las rutas de pago
 app.use('/api/payments', paymentRoutes); 
+app.use('/api/orders', orderRoutes);
 
 
 // Ruta para servir las imágenes

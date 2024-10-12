@@ -38,6 +38,17 @@ const addToCart = async (userId, productId, quantity) => {
     }
 };
 
+//Vaciar el carrito
+const clearCart = async (userId) => {
+    const cart = await Cart.findOneAndUpdate({ buyer: userId }, { items: [] }, { new: true });
+
+    if (!cart) {
+        throw new Error('Cart not found.');
+    }
+
+    return cart;
+};
+
 // Función para eliminar un producto del carrito
 const removeFromCart = async (userId, productId) => {
     try {
@@ -63,5 +74,6 @@ const removeFromCart = async (userId, productId) => {
 
 module.exports = {
     addToCart,
+    clearCart,
     removeFromCart
 };

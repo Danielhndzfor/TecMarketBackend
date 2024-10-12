@@ -1,12 +1,9 @@
-const { MercadoPagoConfig, Preference } = require('mercadopago'); // Usa require
 const Cart = require('../models/Cart');
 const Order = require('../models/Order');
 
-const client = new MercadoPagoConfig({ accessToken: 'APP_USR-6422305036676330-092221-d78400c15576406179537cf8aec5a5ed-2003832630' }); // Reemplaza con tu token
-
 exports.createPayment = async (req, res) => {
     try {
-        const { cartId } = req.body;
+        const { cartId, paymentMethod } = req.body; // Ahora también esperamos el método de pago
         const userId = req.user._id;
         const payerEmail = req.user.email;
 
@@ -26,60 +23,21 @@ exports.createPayment = async (req, res) => {
             quantity: item.quantity,
             currency_id: 'MXN' // Asegúrate de establecer la moneda
         }));
-        
 
-        const preference = new Preference(client);
-        const preferenceData = {
-            items: items,
-            payer: {
-                email: payerEmail
-            },
-            back_urls: {
-                success: "https://mi-sitio/success",
-                failure: "http://localhost:5173/home",
-                pending: "https://mi-sitio/pending"
-            },
-            auto_return: "approved",
-            notification_url: "https://mi-sitio/notifications"
-        };
+        // Crear la nueva orden y establecer el estado como "pendiente"
+        const newOrder = new Order({
+            buyer: userId,
+            items,
+            paymentMethod,
+            status: 'pendiente', // Estado inicial de la orden
+            // Aquí puedes incluir otros campos que necesites
+        });
 
-        const response = await preference.create({ body: preferenceData });
-        console.log("Respuesta de MercadoPago:", response); // Muestra la respuesta completa
+        await newOrder.save();
 
-        // Acceder a init_point correctamente
-        if (response && response.init_point) {
-            return res.json({ init_point: response.init_point });
-        } else {
-            console.error("Respuesta de MercadoPago no contiene init_point:", response);
-            throw new Error('No se pudo obtener el init_point de MercadoPago');
-        }
-
+        return res.json({ message: 'Orden creada con éxito', orderId: newOrder._id });
     } catch (error) {
         console.error("Error en el proceso de creación de pago:", error);
-        return res.status(500).json({ error: 'Error en el servidor' });
-    }
-};
-
-
-
-// Actualizar el estado del pedido después del pago exitoso
-exports.handlePaymentNotification = async (req, res) => {
-    try {
-        const { payment_status, external_reference } = req.body;
-
-        const order = await Order.findOne({ externalReference: external_reference });
-
-        if (!order) {
-            return res.status(404).json({ error: 'Orden no encontrada.' });
-        }
-
-        order.status = payment_status;
-        await order.save();
-
-        return res.json({ success: true });
-
-    } catch (error) {
-        console.error("Error al procesar la notificación de pago:", error);
         return res.status(500).json({ error: 'Error en el servidor' });
     }
 };

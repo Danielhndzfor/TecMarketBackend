@@ -1,73 +1,86 @@
 const Product = require('../models/Product');
-const path = require('path');
-const fs = require('fs');
+const User = require('../models/User');
 const cloudinary = require('../config/cloudinary');
 
 // Obtener un producto por ID
 exports.getProduct = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id).populate('category seller');
+        const product = await Product.findById(req.params.id)
+            .populate('category')
+            .populate('seller');  // Popula los datos del vendedor
+
         if (!product) {
             return res.status(404).json({ message: 'Producto no encontrado' });
         }
 
-        // Asegúrate de que las imágenes sean URLs de Cloudinary
-        // Se asume que product.images ya contiene las URLs completas de Cloudinary
         res.json(product);
     } catch (error) {
-        res.status(500).json({ message: 'Error al obtener el producto', error });
+        res.status(500).json({ message: 'Error al obtener el producto', error: error.message });
     }
 };
+
+
+// Controlador para obtener los productos del vendedor autenticado
+exports.getProductsBySeller = async (req, res) => {
+    try {
+        const products = req.user.role === 'admin'
+            ? await Product.find().populate('category').populate('seller')  // Incluye la información del vendedor
+            : await Product.find({ seller: req.user._id }).populate('category').populate('seller');
+
+        if (!products.length) {
+            return res.status(404).json({ message: 'No se encontraron productos para este vendedor.' });
+        }
+
+        res.status(200).json(products);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener los productos', error: error.message });
+    }
+};
+
 
 // Obtener todos los productos
 exports.getProducts = async (req, res) => {
     try {
-        const products = await Product.find().populate('category seller');
-
-        // Asegúrate de que las imágenes sean URLs de Cloudinary
-        // Se asume que product.images ya contiene las URLs completas de Cloudinary
-        const productsWithImageURLs = products.map(product => {
-            return {
-                ...product._doc,
-                images: product.images // Aquí no es necesario modificar ya que son URLs de Cloudinary
-            };
-        });
-
-        res.json(productsWithImageURLs);
+        const products = await Product.find().populate('category').populate('seller');  // Incluye la información del vendedor
+        res.json(products);
     } catch (error) {
-        res.status(500).json({ message: 'Error al obtener los productos', error });
+        res.status(500).json({ message: 'Error al obtener los productos', error: error.message });
     }
 };
 
+
 // Crear un nuevo producto
 exports.createProduct = async (req, res) => {
-    const { name, description, price, stock, category, seller, rating } = req.body;
-    const images = req.files ? req.files.map(file => file.path) : [];
+    const { name, description, price, stock, category } = req.body;
 
     try {
-        const product = new Product({
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ message: 'Vendedor no encontrado' });
+        }
+
+        const imagePaths = req.files.map(file => file.path);
+
+        const newProduct = new Product({
             name,
             description,
             price,
             stock,
             category,
-            seller,
-            rating,
-            images,
+            seller: user._id,
+            sellerName: user.name,
+            sellerFirstName: user.firstName,
+            sellerLastName: user.lastName,
+            sellerEmail: user.email,
+            images: imagePaths
         });
 
-        const savedProduct = await product.save();
-        res.status(201).json({ message: 'Producto creado exitosamente!', product: savedProduct });
+        await newProduct.save();
+        res.status(201).json({ message: 'Producto creado exitosamente', product: newProduct });
     } catch (error) {
-        console.error('Error al crear el producto:', error);
         res.status(500).json({ message: 'Error al crear el producto', error: error.message });
     }
 };
-
-
-
-
-
 
 // Actualizar producto
 exports.updateProduct = async (req, res) => {
@@ -75,33 +88,18 @@ exports.updateProduct = async (req, res) => {
         const productId = req.params.id;
         const { name, price, stock, description, category, imagesToDelete } = req.body;
 
-        // Encuentra el producto en la base de datos
         const product = await Product.findById(productId);
-
         if (!product) {
             return res.status(404).json({ message: 'Producto no encontrado' });
         }
 
-        // Si hay imágenes a eliminar, procesa la eliminación
+        // Eliminar imágenes si se especifica
         if (imagesToDelete && imagesToDelete.length > 0) {
             const imagesToDeleteArray = Array.isArray(imagesToDelete) ? imagesToDelete : JSON.parse(imagesToDelete);
-
             for (const image of imagesToDeleteArray) {
-                if (typeof image === 'string') {
-                    // Extrae el ID de la imagen de Cloudinary de la URL
-                    const publicId = image.split('/').pop().split('.')[0]; // Ajusta según el formato de la URL de Cloudinary
-                    
-                    // Eliminar imagen de Cloudinary
-                    await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
-
-                    // Eliminar imagen del array de la base de datos
-                    const indexToRemove = product.images.findIndex(img => img.includes(publicId));
-                    if (indexToRemove > -1) {
-                        product.images.splice(indexToRemove, 1);
-                    }
-                } else {
-                    console.error('Error: La imagen a eliminar no es una cadena', image);
-                }
+                const publicId = image.split('/').pop().split('.')[0];
+                await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+                product.images = product.images.filter(img => !img.includes(publicId)); // Elimina la imagen del array
             }
         }
 
@@ -112,21 +110,50 @@ exports.updateProduct = async (req, res) => {
         product.description = description || product.description;
         product.category = category || product.category;
 
-        // Si hay nuevas imágenes, añádelas al array de imágenes
+        // Añade nuevas imágenes
         if (req.files && req.files.length > 0) {
-            const newImages = req.files.map(file => file.path); // Asume que las nuevas imágenes están en Cloudinary
+            const newImages = req.files.map(file => file.path);
             product.images.push(...newImages);
         }
 
-        // Guarda los cambios en la base de datos
         const updatedProduct = await product.save();
-
-        res.json(updatedProduct); // Devuelve el producto actualizado como respuesta
+        res.json({ message: 'Producto actualizado exitosamente', product: updatedProduct });
     } catch (error) {
-        console.error('Error al actualizar el producto', error);
-        res.status(500).json({ message: 'Error al actualizar el producto' });
+        res.status(500).json({ message: 'Error al actualizar el producto', error: error.message });
     }
 };
+
+// Actualizar stock de un producto
+exports.updateProductStock = async (req, res) => {
+    const { productId } = req.params; // Obtener productId
+    const { status, quantity } = req.body; // Estado y cantidad del ítem
+
+    try {
+        // Buscar el producto
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
+        }
+
+        // Ajustar el stock del producto según el estado
+        if (status === 'completado') {
+            product.stock -= quantity; // Reduce el stock según la cantidad
+        } else if (status === 'pendiente') {
+            product.stock -= quantity; // Aumenta el stock según la cantidad
+        } else if (status === 'cancelado') {
+            // se regresa la cantidad al stock, es decir, se suma la cantidad
+            product.stock += quantity;
+        }
+
+        // Guardar cambios en el producto
+        await product.save();
+
+        return res.status(200).json({ message: 'Stock del producto actualizado exitosamente' });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error al actualizar el stock del producto', error });
+    }
+};
+
 
 // Eliminar un producto por ID
 exports.deleteProduct = async (req, res) => {
@@ -136,20 +163,37 @@ exports.deleteProduct = async (req, res) => {
             return res.status(404).json({ message: 'Producto no encontrado' });
         }
 
-        // Eliminar las imágenes de Cloudinary
         for (const image of deletedProduct.images) {
-            const publicId = image.split('/').pop().split('.')[0]; // Ajusta según el formato de la URL de Cloudinary
-            try {
-                await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
-            } catch (cloudinaryError) {
-                console.error(`Error al eliminar imagen de Cloudinary: ${publicId}`, cloudinaryError);
-                // No detengas el proceso si hay un error con Cloudinary, puedes manejarlo aquí
-            }
+            const publicId = image.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
         }
 
         res.json({ message: 'Producto eliminado correctamente' });
     } catch (error) {
-        console.error('Error al eliminar el producto', error);
-        res.status(500).json({ message: 'Error al eliminar el producto', error });
+        res.status(500).json({ message: 'Error al eliminar el producto', error: error.message });
     }
 };
+
+
+// Obtener total de productos
+exports.getTotalProducts = async (req, res) => {
+    try {
+        const total = await Product.countDocuments();
+        res.json({ total });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener el total de productos' });
+    }
+};
+
+// Obtener top 5 productos más vendidos
+exports.getTopSoldProducts = async (req, res) => {
+    try {
+        const topSold = await Product.find()
+            .sort({ sold: -1 }) // Asumiendo que hay un campo "sold" que lleva la cuenta de las ventas
+            .limit(5);
+        res.json(topSold);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener los productos más vendidos' });
+    }
+};
+

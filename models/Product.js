@@ -29,15 +29,33 @@ const productSchema = new mongoose.Schema({
         ref: 'User', 
         required: true 
     },
+    sellerName: {
+        type: String,
+        required: true,
+    },
+    sellerFirstName: {
+        type: String,  // Cambiado de sellerLastName1 a sellerFirstName
+        required: true,
+    },
+    sellerLastName: {
+        type: String,  // Cambiado de sellerLastName2 a sellerLastName
+        default: '', // No es obligatorio
+    },
+    sellerEmail: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+    },
     rating: {
         type: Number,
         default: 5
     },
     images: { 
-        type: [String],  // Arreglo de rutas de imágenes
+        type: [String], 
         validate: {
             validator: function(array) {
-                return array.length <= 5;  // Máximo 5 imágenes
+                return array.length <= 5;  
             },
             message: 'Solo se permiten hasta 5 imágenes'
         }
@@ -46,6 +64,5 @@ const productSchema = new mongoose.Schema({
     timestamps: true
 });
 
+
 module.exports = mongoose.model('Product', productSchema);
-
-

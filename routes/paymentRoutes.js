@@ -1,13 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const paymentController = require('../controllers/paymentController'); // Asegúrate de que la ruta es correcta
 const { protect } = require('../middleware/authMiddleware'); // Importa el middleware de autenticación
+const { createPayment, handlePaymentNotification } = require('../controllers/paymentController'); // Asegúrate de que la ruta sea correcta
 
-// Ruta para crear el pago (protegida por el middleware de autenticación)
-router.post('/create-payment', protect, paymentController.createPayment);
+// Ruta para crear un nuevo pago (compra)
+router.post('/create-payment', protect, createPayment);
 
-// Ruta para manejar las notificaciones de pago
-router.post('/payment-notification', paymentController.handlePaymentNotification);
 
 module.exports = router;
+
 
