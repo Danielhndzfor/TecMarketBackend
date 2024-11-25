@@ -1,6 +1,6 @@
 const cartService = require('../services/cartService');
 const Cart = require('../models/Cart');
-const Counter = require('../models/Counter'); // Asegúrate de importar el modelo Counter
+const Counter = require('../models/counter'); // Asegúrate de importar el modelo Counter
 
 // Controlador para añadir un producto al carrito
 exports.addToCart = async (req, res) => {
