@@ -1,12 +1,18 @@
 const cartService = require('../services/cartService');
 const Cart = require('../models/Cart');
+const Counter = require('../models/Counter'); // Asegúrate de importar el modelo Counter
 
 // Controlador para añadir un producto al carrito
 exports.addToCart = async (req, res) => {
     try {
-        const { userId, productId, quantity } = req.body;
-        const cart = await cartService.addToCart(userId, productId, quantity);
-        res.json(cart);
+        const { userId, productId, quantity, cartId } = req.body; // Incluye cartId
+        const cart = await cartService.addToCart(userId, productId, quantity, cartId);
+
+        // Incluir cartId en la respuesta
+        res.json({
+            cartId: cart.cartId,
+            items: cart.items,
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -19,16 +25,28 @@ exports.getCart = async (req, res) => {
     try {
         let cart = await Cart.findOne({ buyer: userId });
         if (!cart) {
-            // Si no existe carrito, creamos uno vacío con el campo 'buyer'
-            cart = new Cart({ buyer: userId, items: [] });
+            // Si no existe carrito, creamos uno vacío
+            const counterDoc = await Counter.findOne({ _id: 'cartId' }); // Asegúrate de que el ID del contador sea correcto
+            if (!counterDoc) {
+                return res.status(500).json({ message: 'Counter not found' });
+            }
+            const nextCartId = counterDoc.sequenceValue + 1;
+
+            // Crear un nuevo carrito y asignar cartId
+            cart = new Cart({ buyer: userId, items: [], cartId: nextCartId });
             await cart.save();
+
+            // Actualizar el contador
+            counterDoc.sequenceValue = nextCartId;
+            await counterDoc.save();
         }
         res.status(200).json(cart);
     } catch (err) {
-        console.error('Error fetching cart:', err.message); // Detalle del error en el servidor
+        console.error('Error fetching cart:', err.message);
         res.status(500).json({ message: 'Error fetching cart.' });
     }
 };
+
 
 // Controlador para vaciar el carrito
 exports.clearCart = async (req, res) => {
@@ -49,14 +67,26 @@ exports.clearCart = async (req, res) => {
     }
 };
 
-
-// Eliminar un producto del carrito
+// Controlador para eliminar un producto del carrito
 exports.removeFromCart = async (req, res) => {
     try {
-        const { userId, productId } = req.body; // Cambiar a req.body
-        const updatedCart = await cartService.removeFromCart(userId, productId);
+        const { userId, productId, cartId } = req.body; // Incluye cartId
+
+        // Verifica que cartId sea válido
+        if (!cartId || isNaN(cartId)) {
+            return res.status(400).json({ message: 'Invalid cartId' });
+        }
+
+        const updatedCart = await cartService.removeFromCart(userId, productId, cartId); // Pasa cartId
+
+        // Verifica si se devolvió un carrito actualizado
+        if (!updatedCart) {
+            return res.status(404).json({ message: 'Cart not found or product not in cart' });
+        }
+
         res.status(200).json(updatedCart);
     } catch (error) {
+        console.error('Error removing item from cart:', error.message);
         res.status(500).json({ message: error.message });
     }
 };

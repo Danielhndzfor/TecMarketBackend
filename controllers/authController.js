@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const Token = require('../models/Token');
+const Counter = require('../models/counter'); // Asegúrate de importar el modelo de Counter
+
 
 // Registrar un nuevo usuario
 const registerUser = async (req, res) => {
@@ -17,8 +19,13 @@ const registerUser = async (req, res) => {
         // Asignar el rol predeterminado si no se envía en la solicitud
         const userRole = role || 'comprador';
 
+        // Obtener el siguiente userId del contador
+        const counterDoc = await Counter.findById('userId');
+        const nextUserId = counterDoc.sequenceValue + 1;
+
         // Crear un nuevo usuario con los datos adicionales
         const user = new User({
+            userId: nextUserId, // Asignar el userId
             name,
             firstName,
             lastName,
@@ -32,6 +39,10 @@ const registerUser = async (req, res) => {
         // Guardar el nuevo usuario en la base de datos
         await user.save();
 
+        // Actualizar el contador
+        counterDoc.sequenceValue = nextUserId;
+        await counterDoc.save();
+
         // Generar un token JWT para el nuevo usuario
         const token = generateToken(user);
 
@@ -41,6 +52,7 @@ const registerUser = async (req, res) => {
         // Responder con los detalles del usuario y el token
         res.status(201).json({
             _id: user._id,
+            userId: user.userId, // Incluir el userId en la respuesta
             name: user.name,
             firstName: user.firstName,
             lastName: user.lastName,
@@ -82,6 +94,7 @@ const authUser = async (req, res) => {
             token,
             user: {
                 _id: user._id,
+                userId: user.userId, // Incluir el userId en la respuesta
                 name: user.name,
                 firstName: user.firstName,
                 lastName: user.lastName,
@@ -92,6 +105,35 @@ const authUser = async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Error del servidor');
+    }
+};
+
+// Borrar usuario
+const deleteUser = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        // Verificar si userId es un número válido
+        const numericUserId = Number(userId);
+        if (isNaN(numericUserId)) {
+            return res.status(400).json({ message: 'ID de usuario no válido' });
+        }
+
+        // Verificar si el usuario tiene permiso para eliminar
+        if (req.user.role !== 'admin' && req.user.userId !== numericUserId) {
+            return res.status(403).json({ message: 'Acceso denegado' });
+        }
+
+        // Buscar y eliminar al usuario por su userId
+        const user = await User.findOneAndDelete({ userId: numericUserId });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        res.status(200).json({ message: 'Usuario eliminado correctamente' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al eliminar el usuario', error: error.message });
     }
 };
 
@@ -110,9 +152,4 @@ const logoutUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, authUser, logoutUser };
-
-
-
-
-
+module.exports = { registerUser, authUser, deleteUser, logoutUser };

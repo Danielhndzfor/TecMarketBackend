@@ -19,6 +19,8 @@ router.put('/:id', protect, authorizeRole(['vendedor', 'admin']), productControl
 router.get('/total', productController.getTotalProducts); // Obtener total de productos
 router.get('/top-sold', productController.getTopSoldProducts); // Obtener top 5 productos más vendidos
 
+router.get('/category/:categoryId', productController.getProductsByCategory);
+
 
 // Ruta para actualizar el stock de un producto
 router.put('/:productId/stock', productController.updateProductStock);

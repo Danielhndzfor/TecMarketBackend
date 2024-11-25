@@ -37,17 +37,38 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
     try {
         const { name, description } = req.body;
+
+        // Validación: Asegurarse de que el campo 'name' esté presente
+        if (!name) {
+            return res.status(400).json({ error: 'El nombre de la categoría es obligatorio.' });
+        }
+
+        // Si 'description' no es obligatorio, puedes omitir su validación
+        // Pero si decides que es obligatorio, añade la siguiente validación:
+        if (!description) {
+            return res.status(400).json({ error: 'La descripción es obligatoria.' });
+        }
+
+        // Actualización de la categoría en la base de datos
         const updatedCategory = await Category.findByIdAndUpdate(
-            req.params.id,
-            { name, description },
-            { new: true }
+            req.params.id, // ID de la categoría a actualizar
+            { name, description }, // Los datos que quieres actualizar
+            { new: true } // Esto devolverá el documento actualizado
         );
-        if (!updatedCategory) return res.status(404).json({ message: 'Categoría no encontrada' });
-        res.status(200).json({ message: 'Categoría actualizada exitosamente', category: updatedCategory });
+
+        if (!updatedCategory) {
+            return res.status(404).json({ error: 'Categoría no encontrada.' });
+        }
+
+        return res.status(200).json(updatedCategory); // Devuelve la categoría actualizada
     } catch (error) {
-        res.status(500).json({ message: 'Error al actualizar la categoría', error });
+        console.error('Error al actualizar la categoría:', error);
+        return res.status(500).json({ error: 'Hubo un problema al actualizar la categoría.' });
     }
 };
+
+
+
 
 // Eliminar una categoría
 exports.deleteCategory = async (req, res) => {

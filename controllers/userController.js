@@ -96,64 +96,152 @@ const updateSellerToUser = async (req, res) => {
     }
 };
 
-const updateUser = async (req, res) => {
-    const userId = req.params.id;
-    const {
-        name,
-        firstName,
-        lastName,
-        dateOfBirth,
-        phoneNumber,
-        email,
-        password,
-        role,
-        businessName,
-        description,
-        category,
-        clabe
-    } = req.body;
+// Obtener todos los usuarios (solo para administradores)
+const getAllUsers = async (req, res) => {
+    try {
+        // Verificación de autenticación y rol
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Acceso denegado' });
+        }
+
+        // Obtener todos los usuarios
+        const users = await User.find();
+
+        // Enviar la respuesta con los usuarios
+        res.status(200).json({ users }); // Envuelve los usuarios en un objeto
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener todos los usuarios', error: error.message });
+    }
+};
+
+
+const updateUser  = async (req, res) => {
+    const userId = req.params.id; // Suponiendo que userId es un número en formato de string
 
     try {
-        const user = await User.findById(userId);
+        // Verifica si userId es un número válido
+        const numericUserId = Number(userId);
+        if (isNaN(numericUserId)) {
+            return res.status(400).json({ message: 'ID de usuario no válido' });
+        }
+
+        // Verificación del rol de administrador
+        if (req.user.role !== 'admin' && req.user.userId !== numericUserId) {
+            return res.status(403).json({ message: 'Acceso denegado' });
+        }
+
+        // Busca al usuario usando el userId numérico
+        const user = await User.findOne({ userId: numericUserId });
         if (!user) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        // Actualizar datos básicos
-        user.name = name;
-        user.firstName = firstName;
-        user.lastName = lastName || ''; // Si no se proporciona, se mantiene vacío
-        user.dateOfBirth = dateOfBirth;
-        user.phoneNumber = phoneNumber;
-        user.email = email;
+        // Actualiza otros campos sin modificar userId
+        user.name = req.body.name || user.name;
+        user.firstName = req.body.firstName || user.firstName;
+        user.lastName = req.body.lastName || user.lastName;
+        user.dateOfBirth = req.body.dateOfBirth || user.dateOfBirth;
+        user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+        user.email = req.body.email || user.email;
 
-        // Solo actualizar la contraseña si se proporciona
-        if (password) {
-            user.password = password;
+        // Solo actualizar la contraseña si se proporciona (recuerda encriptarla)
+        if (req.body.password) {
+            user.password = req.body.password; // Asegúrate de encriptar la contraseña en el pre-save
         }
 
-        // Manejar el rol y datos específicos de vendedor
-        user.role = role; // Actualizar rol
-        if (role === 'vendedor') {
-            user.businessName = businessName; // Este campo es obligatorio si el rol es 'vendedor'
-            user.description = description; // Descripción opcional
-            user.clabe = clabe; // Validar que tenga 18 dígitos
+        user.role = req.body.role || user.role;
+        if (user.role === 'vendedor') {
+            user.businessName = req.body.businessName || user.businessName;
+            user.description = req.body.description || user.description;
+            user.clabe = req.body.clabe || user.clabe;
         } else {
-            // Limpiar campos de vendedor si se cambia a comprador
-            user.businessName = undefined; // Eliminar campo
-            user.description = undefined; // Eliminar campo
-            user.clabe = undefined; // Eliminar campo
+            user.businessName = undefined;
+            user.description = undefined;
+            user.clabe = undefined;
         }
 
-        user.category = category; // Asumimos que la categoría siempre se envía
+        user.category = req.body.category || user.category;
 
-        const updatedUser = await user.save();
-        return res.status(200).json({ message: 'Usuario actualizado exitosamente', user: updatedUser });
+        // Guarda los cambios en el usuario
+        const updatedUser  = await user.save();
+        return res.status(200).json({ message: 'Usuario actualizado exitosamente', user: updatedUser  });
     } catch (error) {
         console.error('Error al actualizar el usuario:', error);
         return res.status(500).json({ message: 'Error al actualizar el usuario', error: error.message });
     }
 };
+
+// Función para contar la cantidad total de usuarios
+const countTotalUsers = async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        res.status(200).json({ totalUsers });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al contar usuarios', error: error.message });
+    }
+};
+
+// Función para contar usuarios con rol de "vendedor"
+const countSellers = async (req, res) => {
+    try {
+        const sellers = await User.countDocuments({ role: 'vendedor' });
+        res.status(200).json({ sellers });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al contar usuarios con rol de vendedor', error: error.message });
+    }
+};
+
+// Función para contar usuarios con rol de "comprador"
+const countBuyers = async (req, res) => {
+    try {
+        const buyers = await User.countDocuments({ role: 'comprador' });
+        res.status(200).json({ buyers });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al contar usuarios con rol de comprador', error: error.message });
+    }
+};
+
+// Contar nuevos usuarios registrados hoy
+const countUsersToday = async (req, res) => {
+    try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const count = await User.countDocuments({ createdAt: { $gte: startOfDay } });
+        res.json({ message: 'Usuarios registrados hoy', count });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al contar usuarios de hoy', error: error.message });
+    }
+};
+
+// Contar nuevos usuarios registrados esta semana
+const countUsersThisWeek = async (req, res) => {
+    try {
+        const startOfWeek = new Date();
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const count = await User.countDocuments({ createdAt: { $gte: startOfWeek } });
+        res.json({ message: 'Usuarios registrados esta semana', count });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al contar usuarios de esta semana', error: error.message });
+    }
+};
+
+// Contar nuevos usuarios registrados este mes
+const countUsersThisMonth = async (req, res) => {
+    try {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const count = await User.countDocuments({ createdAt: { $gte: startOfMonth } });
+        res.json({ message: 'Usuarios registrados este mes', count });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al contar usuarios de este mes', error: error.message });
+    }
+};
+
 
 
 module.exports = {
@@ -161,5 +249,12 @@ module.exports = {
     updateUserRole,
     updateUserToSeller,
     updateSellerToUser,
+    getAllUsers,
     updateUser,
+    countTotalUsers,
+    countSellers,
+    countBuyers,
+    countUsersToday,
+    countUsersThisWeek,
+    countUsersThisMonth,
 };

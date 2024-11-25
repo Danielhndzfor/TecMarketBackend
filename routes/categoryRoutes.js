@@ -6,8 +6,8 @@ const { protect, authorizeRole } = require('../middleware/authMiddleware');
 router.get('/', categoryController.getCategories); // Obtener todas las categorías
 router.get('/:id', categoryController.getCategoryById); // Obtener categoría por ID
 router.post('/', protect, authorizeRole('admin'), categoryController.createCategory); // Crear una nueva categoría
-router.put('/:id', protect, authorizeRole('admin'), categoryController.updateCategory); // Actualizar una categoría
-router.delete('/:id', protect, authorizeRole('admin'), categoryController.deleteCategory); // Eliminar una categoría
+router.put('/:id', categoryController.updateCategory); // Actualizar una categoría
+router.delete('/:id', categoryController.deleteCategory); // Eliminar una categoría
 
 module.exports = router;
 

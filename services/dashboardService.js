@@ -1,4 +1,3 @@
-const Ticket = require('../models/Ticket');
 const Product = require('../models/Product');
 
 // Obtener resumen de ventas

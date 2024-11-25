@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const cartSchema = new mongoose.Schema({
+    cartId: { type: Number, required: true, unique: true }, // Agregar cartId
     buyer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Referencia al comprador
     items: [
         {
             product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true }, // Referencia al producto
             quantity: { type: Number, required: true, min: 1 }, // Cantidad del producto
-            // El campo 'price' se elimina ya que se obtendrá del modelo 'Product'
         }
     ],
     createdAt: { type: Date, default: Date.now },
@@ -23,8 +23,8 @@ cartSchema.methods.calculateTotal = async function() {
     return total;
 };
 
-
 const Cart = mongoose.model('Cart', cartSchema);
 
 module.exports = Cart;
+
 

@@ -1,11 +1,19 @@
 const Product = require('../models/Product');
 const Cart = require('../models/Cart');
+const mongoose = require('mongoose'); // Asegúrate de importar mongoose
 
 // Función para añadir un producto al carrito
-const addToCart = async (userId, productId, quantity) => {
+const addToCart = async (userId, productId, quantity, cartId = null) => {
     try {
-        // Verifica si el carrito existe
-        let cart = await Cart.findOne({ buyer: userId });
+        let cart;
+
+        // Busca el carrito por cartId o buyer
+        if (cartId) {
+            cartId = Number(cartId); // Asegúrate de convertir cartId a un número
+            cart = await Cart.findOne({ cartId });
+        } else {
+            cart = await Cart.findOne({ buyer: userId });
+        }
 
         // Si no existe, crea uno nuevo
         if (!cart) {
@@ -18,8 +26,8 @@ const addToCart = async (userId, productId, quantity) => {
         const price = product.price;
 
         // Verifica si el producto ya está en el carrito
-        const itemIndex = cart.items.findIndex(item => item.product.equals(productId));
-        
+        const itemIndex = cart.items.findIndex(item => item.product.toString() === productId);
+
         if (itemIndex > -1) {
             // Si el producto ya está en el carrito, actualiza la cantidad
             cart.items[itemIndex].quantity += quantity;
@@ -38,7 +46,8 @@ const addToCart = async (userId, productId, quantity) => {
     }
 };
 
-//Vaciar el carrito
+
+// Vaciar el carrito
 const clearCart = async (userId) => {
     const cart = await Cart.findOneAndUpdate({ buyer: userId }, { items: [] }, { new: true });
 
@@ -50,16 +59,30 @@ const clearCart = async (userId) => {
 };
 
 // Función para eliminar un producto del carrito
-const removeFromCart = async (userId, productId) => {
+const removeFromCart = async (userId, productId, cartId = null) => {
     try {
-        let cart = await Cart.findOne({ buyer: userId });
+        let cart;
+
+        // Busca el carrito por cartId o buyer
+        if (cartId) {
+            cartId = Number(cartId); // Asegúrate de convertir cartId a un número
+            cart = await Cart.findOne({ cartId });
+        } else {
+            cart = await Cart.findOne({ buyer: userId });
+        }
 
         if (!cart) {
             throw new Error('Cart not found');
         }
 
         // Filtrar el producto a eliminar del carrito
-        cart.items = cart.items.filter(item => item.product.toString() !== productId);
+        const originalLength = cart.items.length;
+        cart.items = cart.items.filter(item => item.product.toString() !== productId.toString());
+
+        // Si el producto no estaba en el carrito
+        if (cart.items.length === originalLength) {
+            throw new Error('Product not found in cart');
+        }
 
         // Guardar los cambios en el carrito
         cart.updatedAt = Date.now();
@@ -71,6 +94,8 @@ const removeFromCart = async (userId, productId) => {
         throw error;
     }
 };
+
+
 
 module.exports = {
     addToCart,
