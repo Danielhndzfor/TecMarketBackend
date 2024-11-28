@@ -115,17 +115,18 @@ const getAllUsers = async (req, res) => {
 };
 
 
-const updateUser  = async (req, res) => {
-    const userId = req.params.id; // Suponiendo que userId es un número en formato de string
+const updateUser = async (req, res) => {
+    const userId = req.params.id;
+    
 
     try {
-        // Verifica si userId es un número válido
-        const numericUserId = Number(userId);
+        // Verifica si userId es un número entero válido
+        const numericUserId = parseInt(userId, 10); // Asegura que es un número entero
         if (isNaN(numericUserId)) {
             return res.status(400).json({ message: 'ID de usuario no válido' });
         }
 
-        // Verificación del rol de administrador
+        // Verificación del rol de administrador o del propio usuario
         if (req.user.role !== 'admin' && req.user.userId !== numericUserId) {
             return res.status(403).json({ message: 'Acceso denegado' });
         }
@@ -144,9 +145,9 @@ const updateUser  = async (req, res) => {
         user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
         user.email = req.body.email || user.email;
 
-        // Solo actualizar la contraseña si se proporciona (recuerda encriptarla)
+        // Solo actualizar la contraseña si se proporciona (y encriptarla)
         if (req.body.password) {
-            user.password = req.body.password; // Asegúrate de encriptar la contraseña en el pre-save
+            user.password = req.body.password; // Asegúrate de encriptarla
         }
 
         user.role = req.body.role || user.role;
@@ -163,13 +164,15 @@ const updateUser  = async (req, res) => {
         user.category = req.body.category || user.category;
 
         // Guarda los cambios en el usuario
-        const updatedUser  = await user.save();
-        return res.status(200).json({ message: 'Usuario actualizado exitosamente', user: updatedUser  });
+        const updatedUser = await user.save();
+        return res.status(200).json({ message: 'Usuario actualizado exitosamente', user: updatedUser });
+
     } catch (error) {
         console.error('Error al actualizar el usuario:', error);
         return res.status(500).json({ message: 'Error al actualizar el usuario', error: error.message });
     }
 };
+
 
 // Función para contar la cantidad total de usuarios
 const countTotalUsers = async (req, res) => {

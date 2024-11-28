@@ -62,10 +62,6 @@ const productSchema = new mongoose.Schema({
         },
         required: true // Marca como requerido si deseas que siempre se ingrese al crear un producto
     },
-    rating: {
-        type: Number,
-        default: 5
-    },
     images: { 
         type: [String], 
         validate: {

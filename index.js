@@ -30,7 +30,8 @@ const app = express();
 // Configuración de CORS
 // Configura CORS
 app.use(cors({
-    origin: 'https://tecmarket.vercel.app', // Cambia esto por el dominio de tu frontend
+    /* origin: 'https://tecmarket.vercel.app', // Cambia esto por el dominio de tu frontend */
+    origin: 'http://localhost:5173',
     credentials: true
 }));
 
