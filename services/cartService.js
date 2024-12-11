@@ -7,10 +7,9 @@ const addToCart = async (userId, productId, quantity, cartId = null) => {
     try {
         let cart;
 
-        // Busca el carrito por cartId o buyer
+        // Si se proporciona cartId, usa el cartId tal cual como número (sin convertirlo a ObjectId)
         if (cartId) {
-            cartId = Number(cartId); // Asegúrate de convertir cartId a un número
-            cart = await Cart.findOne({ cartId });
+            cart = await Cart.findOne({ cartId: cartId }); // Buscar directamente con cartId como número
         } else {
             cart = await Cart.findOne({ buyer: userId });
         }
@@ -45,6 +44,35 @@ const addToCart = async (userId, productId, quantity, cartId = null) => {
         throw error;
     }
 };
+
+// Servicio para actualizar la cantidad de un producto en el carrito
+const updateProductQuantity = async (userId, productId, quantity, cartId) => {
+    try {
+        // Aquí es donde probablemente está ocurriendo el error.
+        // Asegúrate de que `productId`, `userId`, y `cartId` sean válidos y estén en el formato adecuado
+        const cart = await Cart.findById(cartId);
+        if (!cart) {
+            throw new Error('Carrito no encontrado');
+        }
+
+        const product = cart.items.find(item => item.product.toString() === productId);
+        if (!product) {
+            throw new Error('Producto no encontrado en el carrito');
+        }
+
+        // Si el producto existe, se actualiza la cantidad.
+        product.quantity += quantity;
+
+        // Guarda los cambios en el carrito.
+        await cart.save();
+        
+        return cart; // Retorna el carrito actualizado
+    } catch (error) {
+        console.error('Error updating product quantity:', error);
+        throw error;
+    }
+};
+
 
 
 // Vaciar el carrito
@@ -95,10 +123,9 @@ const removeFromCart = async (userId, productId, cartId = null) => {
     }
 };
 
-
-
 module.exports = {
     addToCart,
     clearCart,
+    updateProductQuantity,
     removeFromCart
 };

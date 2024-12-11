@@ -12,6 +12,13 @@ router.get('/:userId', cartController.getCart);
 // Ruta para eliminar del carrito
 router.post('/remove', cartController.removeFromCart);
 
+// Ruta para aumentar la cantidad
+router.patch('/:cartId/increase', cartController.increaseQuantity);
+
+// Ruta para disminuir la cantidad
+router.patch('/:cartId/decrease', cartController.decreaseQuantity);
+
+
 // Vaciar el carrito
 router.delete('/clear/:userId', cartController.clearCart);  // Nueva ruta para vaciar el carrito
 

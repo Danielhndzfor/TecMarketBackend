@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
     phoneNumber: {
         type: String, // Número de teléfono en formato string para manejar distintos formatos internacionales
         required: true,
+        unique: true,
         validate: {
             validator: function(v) {
                 return /^[0-9]{10,15}$/.test(v); // Validar que contenga entre 10 y 15 dígitos

@@ -116,28 +116,23 @@ const getAllUsers = async (req, res) => {
 
 
 const updateUser = async (req, res) => {
-    const userId = req.params.id;
-    
+    const userId = req.params.id; // El ID del usuario se pasa como parámetro en la URL
 
     try {
-        // Verifica si userId es un número entero válido
-        const numericUserId = parseInt(userId, 10); // Asegura que es un número entero
-        if (isNaN(numericUserId)) {
+        // Verifica si userId es un ObjectId válido de MongoDB
+        if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({ message: 'ID de usuario no válido' });
         }
 
-        // Verificación del rol de administrador o del propio usuario
-        if (req.user.role !== 'admin' && req.user.userId !== numericUserId) {
-            return res.status(403).json({ message: 'Acceso denegado' });
-        }
+        
 
-        // Busca al usuario usando el userId numérico
-        const user = await User.findOne({ userId: numericUserId });
+        // Busca al usuario usando el _id
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        // Actualiza otros campos sin modificar userId
+        // Actualiza otros campos sin modificar _id
         user.name = req.body.name || user.name;
         user.firstName = req.body.firstName || user.firstName;
         user.lastName = req.body.lastName || user.lastName;
